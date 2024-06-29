@@ -5,6 +5,8 @@
 #include "CoreMinimal.h"
 #include "Modules/ModuleManager.h"
 
+class ISequencer;
+
 class FProcAnimModule : public IModuleInterface
 {
 public:
@@ -12,4 +14,6 @@ public:
 	/** IModuleInterface implementation */
 	virtual void StartupModule() override;
 	virtual void ShutdownModule() override;
+
+	static TWeakPtr<ISequencer> WeakSequencer;
 };

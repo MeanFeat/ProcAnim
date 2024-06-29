@@ -26,6 +26,8 @@ public class ProcAnim : ModuleRules
 			new string[]
 			{
 				"Core",
+				"Sequencer", 
+				"MovieSceneTools",
 				// ... add other public dependencies that you statically link with here ...
 			}
 			);
