@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "ISequencerModule.h"
 #include "Modules/ModuleManager.h"
 
 class ISequencer;
@@ -16,4 +17,6 @@ public:
 	virtual void ShutdownModule() override;
 
 	static TWeakPtr<ISequencer> WeakSequencer;
+
+	static FDelegateHandle OnSequencerCreatedDelegateHandle;
 };

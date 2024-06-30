@@ -10,6 +10,7 @@ DECLARE_LOG_CATEGORY_EXTERN(LogProcAnim, Log, All);
 DEFINE_LOG_CATEGORY(LogProcAnim);
 
 TWeakPtr<ISequencer> FProcAnimModule::WeakSequencer = nullptr;
+FDelegateHandle FProcAnimModule::OnSequencerCreatedDelegateHandle;
 
 void FProcAnimModule::StartupModule() {
 	// This code will execute after your module is loaded into memory; the exact timing is specified in the .uplugin file per-module
@@ -18,12 +19,15 @@ void FProcAnimModule::StartupModule() {
 	const auto OnSequencerCreatedDelegate = FOnSequencerCreated::FDelegate::CreateLambda([](const TSharedRef<ISequencer> &InSequencer) {
 		FProcAnimModule::WeakSequencer = InSequencer.ToWeakPtr();
 	});
+	OnSequencerCreatedDelegateHandle = OnSequencerCreatedDelegate.GetHandle();
 	SequencerModule.RegisterOnSequencerCreated(OnSequencerCreatedDelegate);
 }
 
 void FProcAnimModule::ShutdownModule() {
 	// This function may be called during shutdown to clean up your module.  For modules that support dynamic reloading,
 	// we call this function before unloading the module.
+	ISequencerModule& SequencerModule = FModuleManager::LoadModuleChecked<ISequencerModule>("Sequencer");
+	SequencerModule.UnregisterOnSequencerCreated(OnSequencerCreatedDelegateHandle);
 }
 
 #undef LOCTEXT_NAMESPACE
