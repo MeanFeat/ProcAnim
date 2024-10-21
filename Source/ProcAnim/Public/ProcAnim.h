@@ -16,6 +16,11 @@ public:
 	virtual void StartupModule() override;
 	virtual void ShutdownModule() override;
 
+	static TSharedPtr<ISequencer> GetSequencer() {return WeakSequencer.Pin();}
+	
+private:
+	static void CreateSequencerToolbar(FToolBarBuilder& ToolbarBuilder);
+	
 	static TWeakPtr<ISequencer> WeakSequencer;
 
 	static FDelegateHandle OnSequencerCreatedDelegateHandle;

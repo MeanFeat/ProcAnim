@@ -2,6 +2,7 @@
 
 #include "ProcAnim.h"
 #include "ISequencerModule.h"
+#include "PASequencerToolbar.h"
 #include "Editor/Sequencer/Private/Sequencer.h"
 
 #define LOCTEXT_NAMESPACE "FProcAnimModule"
@@ -21,6 +22,17 @@ void FProcAnimModule::StartupModule() {
 	});
 	OnSequencerCreatedDelegateHandle = OnSequencerCreatedDelegate.GetHandle();
 	SequencerModule.RegisterOnSequencerCreated(OnSequencerCreatedDelegate);
+
+
+	// set up the toolbar
+	const TSharedPtr<FExtender> SequencerToolbarExtender = MakeShareable(new FExtender);
+	const TSharedPtr<FUICommandList> SequencerToolbarActions = MakeShared<FUICommandList>();
+
+	SequencerToolbarExtender->AddToolBarExtension("CurveEditor", EExtensionHook::After, SequencerToolbarActions,
+		FToolBarExtensionDelegate::CreateStatic(&FProcAnimModule::CreateSequencerToolbar));
+	
+	SequencerModule.GetToolBarExtensibilityManager()->AddExtender(SequencerToolbarExtender);
+	
 }
 
 void FProcAnimModule::ShutdownModule() {
@@ -28,6 +40,22 @@ void FProcAnimModule::ShutdownModule() {
 	// we call this function before unloading the module.
 	ISequencerModule& SequencerModule = FModuleManager::LoadModuleChecked<ISequencerModule>("Sequencer");
 	SequencerModule.UnregisterOnSequencerCreated(OnSequencerCreatedDelegateHandle);
+}
+
+void FProcAnimModule::CreateSequencerToolbar(FToolBarBuilder& ToolbarBuilder)
+{
+	if(!GetSequencer())
+	{
+		return;
+	}
+	ToolbarBuilder.BeginSection("ProcAnimSequencerTools");
+	ToolbarBuilder.AddComboButton(
+		FUIAction(),
+		FOnGetContent::CreateStatic(&FPASequencerToolbar::GetMenuContent),
+		TAttribute<FText>(),
+		LOCTEXT("ProcAnimSequencerToolsTooltip", "Open Proc Anim Sequencer Tools Menu"),
+		FSlateIcon("ProcAnimEditorStyle", "ProcAnimEditor.ToolbarMenu.Small", "ProcAnimEditor.ToolbarMenu.Small")
+	);
 }
 
 #undef LOCTEXT_NAMESPACE
