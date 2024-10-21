@@ -12,9 +12,12 @@ public:
 	FPASequencerToolbar();
 	~FPASequencerToolbar();
 
-	static TSharedRef<SWidget> GetMenuContent();
+	static void CreateSequencerToolbar(FToolBarBuilder& ToolbarBuilder);
 	
 private:
 
 	static void AddObjectBindingExtensions(const TSharedPtr<FExtender> &ObjectBindingExtender);
+
+	static TSharedRef<SWidget> GetMenuContent();
+
 };

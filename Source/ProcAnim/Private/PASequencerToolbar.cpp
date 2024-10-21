@@ -2,6 +2,8 @@
 
 #include "PASequencerToolbar.h"
 
+#include "ProcAnim.h"
+
 #define LOCTEXT_NAMESPACE "FProcAnimSequecerToolbar"
 
 FPASequencerToolbar::FPASequencerToolbar()
@@ -15,6 +17,22 @@ FPASequencerToolbar::~FPASequencerToolbar()
 void FPASequencerToolbar::AddObjectBindingExtensions(const TSharedPtr<FExtender>& ObjectBindingExtender)
 {
 	const TSharedPtr<FUICommandList> ObjectBindingActions = MakeShared<FUICommandList>();
+}
+
+void FPASequencerToolbar::CreateSequencerToolbar(FToolBarBuilder& ToolbarBuilder)
+{
+	if(!FProcAnimModule::GetSequencer())
+	{
+		return;
+	}
+	ToolbarBuilder.BeginSection("ProcAnimSequencerTools");
+	ToolbarBuilder.AddComboButton(
+		FUIAction(),
+		FOnGetContent::CreateStatic(&FPASequencerToolbar::GetMenuContent),
+		TAttribute<FText>(),
+		LOCTEXT("ProcAnimSequencerToolsTooltip", "Open Proc Anim Sequencer Tools Menu"),
+		FSlateIcon("ProcAnimEditorStyle", "ProcAnimEditor.ToolbarMenu.Small", "ProcAnimEditor.ToolbarMenu.Small")
+	);
 }
 
 TSharedRef<SWidget> FPASequencerToolbar::GetMenuContent()
