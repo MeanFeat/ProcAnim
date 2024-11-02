@@ -10,7 +10,10 @@ public class ProcAnim : ModuleRules
 		
 		PublicIncludePaths.AddRange(
 			new string[] {
-				// ... add public include paths required here ...
+				"$(PluginDir)/Source/ProcAnim/Public/AnimAuthoring",
+				"$(PluginDir)/Source/ProcAnim/Public/AnimCurve",
+				"$(PluginDir)/Source/ProcAnim/Public/Common",
+				"$(PluginDir)/Source/ProcAnim/Public/EditorExtensions",
 			}
 			);
 				
@@ -28,7 +31,9 @@ public class ProcAnim : ModuleRules
 				"Core",
 				"Sequencer", 
 				"MovieSceneTools",
-				"CurveEditor",
+				"CurveEditor", 
+				"Eigen",
+				"MLES",
 				// ... add other public dependencies that you statically link with here ...
 			}
 			);
@@ -39,7 +44,6 @@ public class ProcAnim : ModuleRules
 			{
 				"CoreUObject",
 				"Engine",
-				"MLES",
 				"Slate",
 				"SlateCore",
 				// ... add private dependencies that you statically link with here ...	

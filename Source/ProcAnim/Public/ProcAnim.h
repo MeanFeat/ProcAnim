@@ -4,8 +4,10 @@
 
 #include "CoreMinimal.h"
 #include "ISequencerModule.h"
+#include "PACurveCollector.h"
 #include "Modules/ModuleManager.h"
 
+class UPASettings;
 class ISequencer;
 
 class FProcAnimModule : public IModuleInterface
@@ -18,10 +20,12 @@ public:
 
 	static TSharedPtr<ISequencer> GetSequencer() {return WeakSequencer.Pin();}
 	
+	static UPASettings *PASettings;
+
 private:
-	static void CreateSequencerToolbar(FToolBarBuilder& ToolbarBuilder);
 	
 	static TWeakPtr<ISequencer> WeakSequencer;
 
-	static FDelegateHandle OnSequencerCreatedDelegateHandle;
+	FDelegateHandle SequencerExtensionHandle;
+	FDelegateHandle CurveEditorExtensionHandle;
 };

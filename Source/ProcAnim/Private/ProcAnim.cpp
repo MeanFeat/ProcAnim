@@ -3,25 +3,28 @@
 #include "ProcAnim.h"
 #include "ICurveEditorModule.h"
 #include "ISequencerModule.h"
+#include "ISettingsModule.h"
+#include "PACurveEditorExtension.h"
 #include "PASequencerToolbar.h"
+#include "PASettings.h"
 #include "Editor/Sequencer/Private/Sequencer.h"
 
-#define LOCTEXT_NAMESPACE "FProcAnimModule"
+UPASettings* FProcAnimModule::PASettings = nullptr;
+TWeakPtr<ISequencer> FProcAnimModule::WeakSequencer = nullptr;
 
+#define LOCTEXT_NAMESPACE "FProcAnimModule"
 DECLARE_LOG_CATEGORY_EXTERN(LogProcAnim, Log, All);
 DEFINE_LOG_CATEGORY(LogProcAnim);
 
-TWeakPtr<ISequencer> FProcAnimModule::WeakSequencer = nullptr;
-FDelegateHandle FProcAnimModule::OnSequencerCreatedDelegateHandle;
 
 void FProcAnimModule::StartupModule() {
 	
 	// Sequencer
 	ISequencerModule& SequencerModule = FModuleManager::LoadModuleChecked<ISequencerModule>("Sequencer");
 	const auto OnSequencerCreatedDelegate = FOnSequencerCreated::FDelegate::CreateLambda([](const TSharedRef<ISequencer> &InSequencer) {
-		FProcAnimModule::WeakSequencer = InSequencer.ToWeakPtr();
+		WeakSequencer = InSequencer.ToWeakPtr();
 	});
-	OnSequencerCreatedDelegateHandle = OnSequencerCreatedDelegate.GetHandle();
+	SequencerExtensionHandle = OnSequencerCreatedDelegate.GetHandle();
 	SequencerModule.RegisterOnSequencerCreated(OnSequencerCreatedDelegate);
 
 	const TSharedPtr<FExtender> SequencerToolbarExtender = MakeShareable(new FExtender);
@@ -34,6 +37,24 @@ void FProcAnimModule::StartupModule() {
 
 	// Curve Editor
 	ICurveEditorModule& CurveEditorModule = FModuleManager::Get().LoadModuleChecked<ICurveEditorModule>("CurveEditor");
+	CurveEditorExtensionHandle = CurveEditorModule.RegisterEditorExtension(FOnCreateCurveEditorExtension::CreateStatic(&FPACurveEditorExtension::CreateCurveEditorExtension));
+
+	// Settings
+	PASettings = GetMutableDefault<UPASettings>();
+	
+#if WITH_EDITORONLY_DATA 
+	if (ISettingsModule* SettingsModule = FModuleManager::GetModulePtr<ISettingsModule>("Settings"))
+	{
+		SettingsModule->RegisterSettings(
+			"Project",
+			"ProcAnim",
+			"ProcAnimSettings",
+			LOCTEXT("RuntimeSettingsName", "Procedural Animation Parameters"),
+			LOCTEXT("RuntimeSettingsDescription", "Globally accessible data for use in procedural animation"),
+			PASettings
+		);
+	}
+#endif
 	
 }
 
@@ -43,9 +64,10 @@ void FProcAnimModule::ShutdownModule() {
 
 	// TODO: Unregister Editor Extension
 	ISequencerModule& SequencerModule = FModuleManager::LoadModuleChecked<ISequencerModule>("Sequencer");
-	SequencerModule.UnregisterOnSequencerCreated(OnSequencerCreatedDelegateHandle);
+	SequencerModule.UnregisterOnSequencerCreated(SequencerExtensionHandle);
 	
 	ICurveEditorModule& CurveEditorModule = FModuleManager::Get().LoadModuleChecked<ICurveEditorModule>("CurveEditor");
+	CurveEditorModule.UnregisterEditorExtension(CurveEditorExtensionHandle);
 }
 
 #undef LOCTEXT_NAMESPACE

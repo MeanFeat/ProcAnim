@@ -1,7 +1,6 @@
 ﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 #include "PASequencerToolbar.h"
-
 #include "ProcAnim.h"
 
 #define LOCTEXT_NAMESPACE "FProcAnimSequecerToolbar"

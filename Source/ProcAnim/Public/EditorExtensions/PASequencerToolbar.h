@@ -6,7 +6,7 @@
 /**
  * 
  */
-class PROCANIM_API FPASequencerToolbar
+class FPASequencerToolbar
 {
 public:
 	FPASequencerToolbar();
