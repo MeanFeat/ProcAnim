@@ -4,7 +4,6 @@
 
 #include "CoreMinimal.h"
 #include "ISequencerModule.h"
-#include "PACurveCollector.h"
 #include "Modules/ModuleManager.h"
 
 class UPASettings;

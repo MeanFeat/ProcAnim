@@ -16,6 +16,6 @@ class PROCANIM_API UPACurveCollector : public UDataAsset
 
 public: 
 
-	UPROPERTY(VisibleAnywhere, Category = "Curves")
+	UPROPERTY(EditAnywhere, Category = "Curves")
 	TArray<FRichCurve> Curves;
 };

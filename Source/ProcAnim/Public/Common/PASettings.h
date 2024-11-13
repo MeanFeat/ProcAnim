@@ -2,10 +2,11 @@
 
 #pragma once
 #include "CoreMinimal.h"
-#include "PACurveCollector.h"
 #include "UObject/Object.h"
 #include "PASettings.generated.h"
 
+class UPACurveCollector;
+class UMLNeuralNet;
 /**
  * 
  */
@@ -16,10 +17,22 @@ class PROCANIM_API UPASettings : public UObject
 
 public:
 
-	UPROPERTY(EditAnywhere, Config, Category = "Curve Collector")
+	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
+
+	UPROPERTY(EditAnywhere, Config, Category = "Curve Reducer")
+	TSoftObjectPtr<UMLNeuralNet> PACurveReducerNeuralNet = nullptr;
+
+	UPROPERTY(EditAnywhere, Config, Category = "Curve Reducer|Collector")
 	TSoftObjectPtr<UPACurveCollector> PACurveCollector = nullptr;
 	
-	UPROPERTY(EditAnywhere, Config, Category = "Curve Collector")
+	UPROPERTY(EditAnywhere, Config, Category = "Curve Reducer|Collector")
 	bool VerifyCurvesOnAdd = true;
+
+	UPROPERTY(EditAnywhere, Config, Category = "Animation Data")
+	float DefaultFPS = 30.f;
+
+	// todo: should we ust use UAnimationSettings::DefaultFrameRate?
+	UPROPERTY(VisibleAnywhere, Category = "Animation Data")
+	float DefaultFrameInterval = 1.f/DefaultFPS;
 	
 };

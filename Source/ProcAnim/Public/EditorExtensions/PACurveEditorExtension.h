@@ -30,6 +30,9 @@ private:
 	void FillToolbarTools(FToolBarBuilder& ToolbarBuilder);
 	TSharedRef<SWidget> GetMenuContent();
 	void CollectSelectedCurves() const;
+	void TestSelectedCurves() const;
+
+	TArray<FRichCurve> GetSelectedCurves() const;
 
 	TWeakPtr<FCurveEditor> WeakCurveEditor;
 };

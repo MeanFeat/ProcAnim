@@ -1,11 +1,16 @@
 ﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 #include "PACurveEditorExtension.h"
+#include "PACurveCollector.h"
+#include "PACurveReducerDataProcessor.h"
 #include "PASettings.h"
 #include "ProcAnim.h"
 #include "RichCurveEditorModel.h"
+#include "NeuralNet/MLNeuralNet.h"
 
 #define LOCTEXT_NAMESPACE "FPACurveEditorExtension"
+
+class UPACurveReducerDataProcessor;
 
 FPACurveEditorExtension::~FPACurveEditorExtension()
 {
@@ -62,6 +67,16 @@ TSharedRef<SWidget> FPACurveEditorExtension::GetMenuContent()
 			FCanExecuteAction::CreateStatic( [](){ return true; } )
 		)
 	);
+
+	MenuBuilder.AddMenuEntry(
+		LOCTEXT("TestSelected", "TestSelected"),
+		LOCTEXT("TestSelectedTooltip", "Test Selected Curves"),
+		FSlateIcon(),
+		FUIAction(
+			FExecuteAction::CreateSP(this, &FPACurveEditorExtension::TestSelectedCurves),
+			FCanExecuteAction::CreateStatic( [](){ return true; } )
+		)
+	);
 	
 	return MenuBuilder.MakeWidget();
 }
@@ -69,11 +84,88 @@ TSharedRef<SWidget> FPACurveEditorExtension::GetMenuContent()
 void FPACurveEditorExtension::CollectSelectedCurves() const
 {
 	const TSharedPtr<FCurveEditor> CurveEditor = WeakCurveEditor.Pin();
-	UPACurveCollector* CurveCollection = FProcAnimModule::PASettings->PACurveCollector.Get();
+	UPACurveCollector* CurveCollection = FProcAnimModule::PASettings->PACurveCollector.LoadSynchronous();
 	if (!CurveEditor.IsValid() || !CurveCollection)
 	{
 		return;
 	}
+
+	TArray<FRichCurve> Curves = GetSelectedCurves();
+	for (int32 i = Curves.Num() - 1; i >= 0; i--)
+	{
+		if (Curves[i].Keys.Num() < 3 || Curves[i].IsConstant())
+		{
+			Curves.RemoveAt(i);
+		}
+	}
+	
+	if(Curves.Num() > 0)
+	{
+		CurveCollection->Modify();
+		CurveCollection->Curves.Append(Curves);
+	}
+}
+
+void FPACurveEditorExtension::TestSelectedCurves() const
+{
+	const TSharedPtr<FCurveEditor> CurveEditor = WeakCurveEditor.Pin();
+	const UMLNeuralNet* CurveReducerNeuralNet = FProcAnimModule::PASettings->PACurveReducerNeuralNet.LoadSynchronous();
+	if (!CurveEditor.IsValid() || !CurveReducerNeuralNet)
+	{
+		return;
+	}
+	
+	TArray<FRichCurve> Curves = GetSelectedCurves();
+	for (int32 i = Curves.Num() - 1; i >= 0; i--)
+	{
+		if (Curves[i].IsConstant())
+		{
+			Curves.RemoveAt(i);
+		}
+	}
+
+	const float Interval = FProcAnimModule::PASettings->DefaultFrameInterval;
+	const UPACurveReducerDataProcessor *DataProcessor = CurveReducerNeuralNet->DataProcessorClass->GetDefaultObject<UPACurveReducerDataProcessor>();
+	int32 Correct = 0, Incorrect = 0;
+	for(FRichCurve &Curve : Curves)
+	{
+		MatrixXf ProcessedInput = DataProcessor->PreprocessInput(Curve);
+		MatrixXf Output = CurveReducerNeuralNet->Forward(ProcessedInput);
+		TArray<float> OutputArray;
+		
+		OutputArray.Reserve(Output.cols());
+		for(int32 i = 0; i < Output.cols(); i++)
+		{
+			OutputArray.Add(Output(0, i));
+		}
+		const FCurveReducerCurveParams Params(Curve);
+		float t = Params.StartTime;
+		for(const float Value : OutputArray)
+		{
+			if(Value > 0.75f)
+			{
+				if(Curve.KeyExistsAtTime(t))
+				{
+					//UE_LOG(LogTemp, Warning, TEXT("Key Predicted Correctly at Time: %f, Output: %f"), t, Value);
+					Correct++;
+				}
+				else
+				{
+					UE_LOG(LogTemp, Error, TEXT("Incorrect at Time: %f, Output: %f"), t, Value);
+					Incorrect++;
+				}
+			}
+			t += Interval;
+		}
+	}
+	UE_LOG(LogTemp, Warning, TEXT("Correct: %d, Incorrect: %d Ratio: %f"), Correct, Incorrect, (float)Correct / float(Correct + Incorrect));
+}
+
+TArray<FRichCurve> FPACurveEditorExtension::GetSelectedCurves() const
+{
+	TArray<FRichCurve> Curves;
+	const TSharedPtr<FCurveEditor> CurveEditor = WeakCurveEditor.Pin();
+	check(CurveEditor.IsValid());
 	
 	const FCurveEditorSelection &Selection = CurveEditor.Get()->GetSelection();
 	TArray<FKeyHandle> OriginalKeyHandles;
@@ -83,11 +175,6 @@ void FPACurveEditorExtension::CollectSelectedCurves() const
 		if (const FCurveModel* CurveModel = CurveEditor->FindCurve(SelectedCurve.Key))
         {
 			const int32 KeyCount = SelectedCurve.Value.Num();
-			if (KeyCount < 3)
-			{
-				continue;
-			}
-			
 			const FKeyHandleSet KeyHandleSet = SelectedCurve.Value;
 			OriginalKeyHandles.Reset(KeyCount);
 			OriginalKeyHandles.Append(KeyHandleSet.AsArray().GetData(), KeyCount);
@@ -104,9 +191,10 @@ void FPACurveEditorExtension::CollectSelectedCurves() const
 				MinVal = FMath::Min(Key.OutputValue, MinVal);
 				MaxVal = FMath::Max(Key.OutputValue, MaxVal);
 			}
+			
 			if(MinVal == MaxVal)
             {
-                UE_LOG(LogTemp, Warning, TEXT("Curve has constant value: %s"), *CurveModel->GetLongDisplayName().ToString());
+                //UE_LOG(LogTemp, Warning, TEXT("Curve has constant value: %s"), *CurveModel->GetLongDisplayName().ToString());
                 continue;
             }
 			
@@ -152,9 +240,7 @@ void FPACurveEditorExtension::CollectSelectedCurves() const
 					Key.LeaveTangentWeight = KeyAttribute.GetLeaveTangentWeight();
                 }
             }
-			CurveCollection->Modify();
-			CurveCollection->Curves.Add(Curve);
-
+			
 			if(FProcAnimModule::PASettings->VerifyCurvesOnAdd)
 			{
 				double t = MinKey;
@@ -167,10 +253,13 @@ void FPACurveEditorExtension::CollectSelectedCurves() const
 					{
 						UE_LOG(LogTemp, Warning, TEXT("Curve evaluation mismatch (%s): Time: %f ModelValue: %f, CurveValue: %f"), *CurveModel->GetLongDisplayName().ToString(), t, ModelValue, CurveValue);
 					}
-					t += 0.01;
+					t += FProcAnimModule::PASettings->DefaultFrameInterval;
 				}
 			}
+			
+			Curves.Add(Curve);
 		}
 	}
+	return Curves;
 }
 #undef LOCTEXT_NAMESPACE
