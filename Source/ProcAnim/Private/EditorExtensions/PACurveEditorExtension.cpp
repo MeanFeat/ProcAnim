@@ -142,19 +142,23 @@ void FPACurveEditorExtension::TestSelectedCurves() const
 		float t = Params.StartTime;
 		for(const float Value : OutputArray)
 		{
+			const bool bIsKey = Curve.KeyExistsAtTime(t);
 			if(Value > 0.75f)
 			{
-				if(Curve.KeyExistsAtTime(t))
+				if(bIsKey)
 				{
-					//UE_LOG(LogTemp, Warning, TEXT("Key Predicted Correctly at Time: %f, Output: %f"), t, Value);
 					Correct++;
 				}
 				else
 				{
-					UE_LOG(LogTemp, Error, TEXT("Incorrect at Time: %f, Output: %f"), t, Value);
 					Incorrect++;
 				}
 			}
+			else if(bIsKey)
+			{
+				Incorrect++;
+			}
+			
 			t += Interval;
 		}
 	}
