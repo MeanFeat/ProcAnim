@@ -1,6 +1,8 @@
 ﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 #include "PACurveReducerDataProcessor.h"
+#include "PASettings.h"
+#include "ProcAnim.h"
 
 MatrixXf UPACurveReducerDataProcessor::PreprocessInput(const FRichCurve& InputCurve) const
 {
@@ -49,8 +51,9 @@ MatrixXf UPACurveReducerDataProcessor::PreprocessInput(const FRichCurve& InputCu
 			SquaredNormals.Add(Normal * Normal);
         }
 
-		TArray<float> FinalData = EvalWindow;
-		FinalData.Append(Normals);
+		//TArray<float> FinalData = EvalWindow;
+		//FinalData.Append(Normals);
+		TArray<float> FinalData = Normals;
 		FinalData.Append(SquaredNormals);
 		
 		Result.col(c) = Map<VectorXf>(FinalData.GetData(), SampleSize);
@@ -69,7 +72,7 @@ MatrixXf UPACurveReducerDataProcessor::CalculateLabels(const FRichCurve& InputCu
 	float t = CurveParams.StartTime;
 	for(int32 r = 0; r < SampleCount; r++)
 	{
-		const float Label = InputCurve.KeyExistsAtTime(t) ? 1.f : 0.f;
+		const float Label = InputCurve.KeyExistsAtTime(t) ? 1.f : -1.f;
 		Result(r) = Label;
 		t += Interval;
 	}

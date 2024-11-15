@@ -3,8 +3,6 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "PASettings.h"
-#include "ProcAnim.h"
 #include "NeuralNet/MLNeuralNetDataProcessor.h"
 #include "Eigen/Dense"
 #include "PACurveReducerDataProcessor.generated.h"
@@ -53,6 +51,6 @@ public:
 	static MatrixXf CalculateLabels(const FRichCurve& InputCurve);
 
 	// uneven numbers only; center index is removed
-	int32 WindowSize = 5;
+	int32 WindowSize = 9;
 	
 };

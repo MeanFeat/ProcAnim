@@ -142,7 +142,7 @@ void FPACurveEditorExtension::TestSelectedCurves() const
 		float t = Params.StartTime;
 		for(const float Value : OutputArray)
 		{
-			const bool bIsKey = Curve.KeyExistsAtTime(t);
+			const bool bIsKey = Curve.KeyExistsAtTime(t) && t != Params.StartTime && t != Params.EndTime;
 			if(Value > 0.75f)
 			{
 				if(bIsKey)
