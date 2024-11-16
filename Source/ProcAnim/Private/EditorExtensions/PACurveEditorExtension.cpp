@@ -7,6 +7,7 @@
 #include "ProcAnim.h"
 #include "RichCurveEditorModel.h"
 #include "Animation/AnimationSettings.h"
+#include "Common/MLESLibrary.h"
 #include "NeuralNet/MLNeuralNet.h"
 
 #define LOCTEXT_NAMESPACE "FPACurveEditorExtension"
@@ -145,10 +146,11 @@ void FPACurveEditorExtension::TestSelectedCurves()
 			if (Value > 0.85f)
 			{
 				FRichCurveKey Key;
+				const float StartTime = + Curve.Keys[0].Time;
 				DataProcessor->ConvertDataToKey(Output.col(i), Key);
-				const double ResultTime = double(i) * Interval;
+				const double ResultTime = (double(i) * Interval);
 				UE_LOG(LogTemp, Warning, TEXT("Neural Arrive Tangent: %f, Arrive Tangent Weight: %f, Leave Tangent: %f, Leave Tangent Weight: %f"), Key.ArriveTangent, Key.ArriveTangentWeight, Key.LeaveTangent, Key.LeaveTangentWeight);
-				if (const FRichCurveKey* ActualKey = CopyOfKeys.FindByPredicate([ResultTime](const FRichCurveKey &K) { return FMath::IsNearlyEqual(K.Time, ResultTime, 0.01); }))
+				if (const FRichCurveKey* ActualKey = CopyOfKeys.FindByPredicate([ResultTime, StartTime](const FRichCurveKey &K) { return FMath::IsNearlyEqual(K.Time, ResultTime + StartTime, 0.01); }))
 				{
 					UE_LOG(LogTemp, Warning, TEXT("Actual Arrive Tangent: %f, Arrive Tangent Weight: %f, Leave Tangent: %f, Leave Tangent Weight: %f"), ActualKey->ArriveTangent, ActualKey->ArriveTangentWeight, ActualKey->LeaveTangent, ActualKey->LeaveTangentWeight);
 				}
@@ -160,7 +162,10 @@ void FPACurveEditorExtension::TestSelectedCurves()
 				Results += FString::SanitizeFloat(ResultTime) + ", ";
 			}
 		}
+		UE_LOG(LogTemp, Log, TEXT("Value: \n%s"), *FMLESLibrary::EigenMatrixToString(Output));
 		UE_LOG(LogTemp, Warning, TEXT("ResultTimes: %s"), *Results);
+
+
 
 		const float StartKeyTime = Curve.Keys[0].Time;
 		FString Actual = "";

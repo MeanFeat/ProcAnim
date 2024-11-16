@@ -3,6 +3,7 @@
 #include "PACurveReducerDataProcessor.h"
 #include "PASettings.h"
 #include "ProcAnim.h"
+#include "Common/MLESLibrary.h"
 
 int32 UPACurveReducerDataProcessor::OutputSize = 5;
 
@@ -15,7 +16,7 @@ MatrixXf UPACurveReducerDataProcessor::PreprocessInput(const FRichCurve& InputCu
 	const float WingLength = Interval * float(LeadSampleIndex);
 
 	const int32 SampleCount = ((CurveParams.EndTime - CurveParams.StartTime) / Interval) + 1;
-	const int32 SampleSize = (WindowSize - 1) * 3;
+	const int32 SampleSize = ((WindowSize - 1) * 4) - 1;
 	MatrixXf Result(SampleSize, SampleCount);
 	TArray<float> EvalWindow;
 	for(int32 c = 0; c < SampleCount; c++)
@@ -51,11 +52,20 @@ MatrixXf UPACurveReducerDataProcessor::PreprocessInput(const FRichCurve& InputCu
 			Normals.Add(Normal);
 			SquaredNormals.Add(Normal * Normal);
         }
-
+		
+		TArray<float> Tangents;
+		for(int32 i = 1; i < EvalWindow.Num(); i++)
+		{
+			const float Delta = EvalWindow[i] - EvalWindow[i - 1];
+			const float Tangent = (Delta / Interval) * TangentCompression;
+			Tangents.Add(Tangent);
+		}
+		
 		TArray<float> FinalData = EvalWindow;
 		FinalData.Append(Normals);
+		FinalData.Append(Tangents);
 		FinalData.Append(SquaredNormals);
-		
+		check(FinalData.Num() == SampleSize)
 		Result.col(c) = Map<VectorXf>(FinalData.GetData(), SampleSize);
 	}
 	return Result;
@@ -67,8 +77,8 @@ MatrixXf UPACurveReducerDataProcessor::CalculateLabels(const FRichCurve& InputCu
 	const double Interval = FProcAnimModule::PASettings->DefaultFrameInterval;
 	
 	const int32 SampleCount = ((CurveParams.EndTime - CurveParams.StartTime) / Interval) + 1;
-	MatrixXf Result = MatrixXf::Ones(OutputSize, SampleCount) * -1.f;
-	
+	MatrixXf Result = MatrixXf::Zero(OutputSize, SampleCount);
+	Result.row(0) = VectorXf::Ones(SampleCount) * -1.f;
 	for (const FRichCurveKey Key : InputCurve.Keys)
 	{
 		const float Time = Key.Time;
