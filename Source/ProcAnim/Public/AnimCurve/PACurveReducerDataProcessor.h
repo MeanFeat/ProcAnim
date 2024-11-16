@@ -51,6 +51,6 @@ public:
 	static MatrixXf CalculateLabels(const FRichCurve& InputCurve);
 
 	// uneven numbers only; center index is removed
-	int32 WindowSize = 9;
+	int32 WindowSize = 5;
 	
 };

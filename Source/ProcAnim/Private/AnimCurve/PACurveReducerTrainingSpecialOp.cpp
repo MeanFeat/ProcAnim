@@ -17,10 +17,11 @@ void UPACurveReducerTrainingSpecialOp::Operation() const
 	{
 		return;
 	}
-
+	TrainingData->ResetData();
 	if(const UPACurveReducerDataProcessor* CurveReducer = NeuralNet->DataProcessorClass->GetDefaultObject<UPACurveReducerDataProcessor>())
 	{
-		const TArray<FRichCurve> &Curves = CurveCollector->Curves;
+		const TArray<FRichCurve> Curves = CurveCollector->Curves;
+		
 		Eigen::MatrixXf Data, Labels;
 		CurveReducer->PreProcessTrainingData(Curves, Data, Labels);
 		TrainingData->AppendData(Data, Labels);

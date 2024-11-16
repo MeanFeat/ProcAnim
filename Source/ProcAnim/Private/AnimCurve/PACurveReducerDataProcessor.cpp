@@ -8,15 +8,14 @@ MatrixXf UPACurveReducerDataProcessor::PreprocessInput(const FRichCurve& InputCu
 {
 	const FCurveReducerCurveParams CurveParams(InputCurve);
 
-	const float Interval = FProcAnimModule::PASettings->DefaultFrameInterval;
+	const double Interval = FProcAnimModule::PASettings->DefaultFrameInterval;
 	const int32 LeadSampleIndex = FMath::DivideAndRoundDown(WindowSize, 2);
 	const float WingLength = Interval * float(LeadSampleIndex);
 
-	const int32 SampleCount = (CurveParams.EndTime - CurveParams.StartTime) / Interval;
+	const int32 SampleCount = ((CurveParams.EndTime - CurveParams.StartTime) / Interval) + 1;
 	const int32 SampleSize = (WindowSize - 1) * 3;
 	MatrixXf Result(SampleSize, SampleCount);
 	TArray<float> EvalWindow;
-	
 	for(int32 c = 0; c < SampleCount; c++)
 	{
 		const float t = CurveParams.StartTime + c * Interval;
@@ -51,9 +50,8 @@ MatrixXf UPACurveReducerDataProcessor::PreprocessInput(const FRichCurve& InputCu
 			SquaredNormals.Add(Normal * Normal);
         }
 
-		//TArray<float> FinalData = EvalWindow;
-		//FinalData.Append(Normals);
-		TArray<float> FinalData = Normals;
+		TArray<float> FinalData = EvalWindow;
+		FinalData.Append(Normals);
 		FinalData.Append(SquaredNormals);
 		
 		Result.col(c) = Map<VectorXf>(FinalData.GetData(), SampleSize);
@@ -64,17 +62,16 @@ MatrixXf UPACurveReducerDataProcessor::PreprocessInput(const FRichCurve& InputCu
 MatrixXf UPACurveReducerDataProcessor::CalculateLabels(const FRichCurve& InputCurve)
 {
 	const FCurveReducerCurveParams CurveParams(InputCurve);
-	const float Interval = FProcAnimModule::PASettings->DefaultFrameInterval;
+	const double Interval = FProcAnimModule::PASettings->DefaultFrameInterval;
+	
+	const int32 SampleCount = ((CurveParams.EndTime - CurveParams.StartTime) / Interval) + 1;
+	MatrixXf Result = MatrixXf::Zero(1, SampleCount);
 
-	const int32 SampleCount = (CurveParams.EndTime - CurveParams.StartTime) / Interval;
-	MatrixXf Result(1, SampleCount);
-
-	float t = CurveParams.StartTime;
-	for(int32 r = 0; r < SampleCount; r++)
+	for (const auto Key : InputCurve.Keys)
 	{
-		const float Label = InputCurve.KeyExistsAtTime(t) ? 1.f : -1.f;
-		Result(r) = Label;
-		t += Interval;
+		const float Time = Key.Time;
+		const int32 Index = FMath::RoundToInt32((Time - CurveParams.StartTime) / Interval);
+		Result(Index) = 1.f;
 	}
 	return Result;
 }
@@ -87,21 +84,10 @@ void UPACurveReducerDataProcessor::PreProcessTrainingData(const TArray<FRichCurv
 	{
 		MatrixXf Data = PreprocessInput(Curve);
 		MatrixXf Labels = CalculateLabels(Curve);
-		
-		const int32 WingSamples = FMath::DivideAndRoundDown(WindowSize, 2);
-		Data = Data.rightCols(Data.cols() - WingSamples);
-		Labels = Labels.rightCols(Labels.cols() - WingSamples);
-		Data.conservativeResize(Data.rows(), Data.cols() - WingSamples);
-		Labels.conservativeResize(Labels.rows(), Labels.cols() - WingSamples);
 
 		check(Data.cols() == Labels.cols())
 
 		const int32 ColCount = OutData.cols() + Data.cols();
-
-		/*OutData.conservativeResize(Data.rows(), ColCount);
-		OutLabels.conservativeResize(Labels.rows(), ColCount);
-		OutData.rightCols(Data.cols()) = Data;
-		OutLabels.rightCols(Data.cols()) = Labels;*/
 		
 		MatrixXf ResultInput = MatrixXf(Data.rows(), ColCount);
 		ResultInput << OutData, Data;

@@ -29,10 +29,10 @@ public:
 	bool VerifyCurvesOnAdd = true;
 
 	UPROPERTY(EditAnywhere, Config, Category = "Animation Data")
-	float DefaultFPS = 30.f;
+	double DefaultFPS = 30.0;
 
 	// todo: should we ust use UAnimationSettings::DefaultFrameRate?
 	UPROPERTY(VisibleAnywhere, Category = "Animation Data")
-	float DefaultFrameInterval = 1.f/DefaultFPS;
+	double DefaultFrameInterval = 1.0/DefaultFPS;
 	
 };

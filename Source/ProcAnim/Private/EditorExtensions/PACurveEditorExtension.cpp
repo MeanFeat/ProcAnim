@@ -6,6 +6,7 @@
 #include "PASettings.h"
 #include "ProcAnim.h"
 #include "RichCurveEditorModel.h"
+#include "Animation/AnimationSettings.h"
 #include "NeuralNet/MLNeuralNet.h"
 
 #define LOCTEXT_NAMESPACE "FPACurveEditorExtension"
@@ -22,11 +23,11 @@ void FPACurveEditorExtension::BindCommands(TSharedRef<FUICommandList> CommandBin
 
 TSharedRef<ICurveEditorExtension> FPACurveEditorExtension::CreateCurveEditorExtension(TWeakPtr<FCurveEditor> InCurveEditor)
 {
-	TSharedRef<FPACurveEditorExtension> Extender = MakeShared<FPACurveEditorExtension>(InCurveEditor);
+	TSharedRef<FPACurveEditorExtension> EditorExtension = MakeShared<FPACurveEditorExtension>(InCurveEditor);
 	ICurveEditorModule& CurveEditorModule = FModuleManager::Get().LoadModuleChecked<ICurveEditorModule>("CurveEditor");
-	const auto ToolbarExtender = ICurveEditorModule::FCurveEditorMenuExtender::CreateSP(Extender, &FPACurveEditorExtension::ExtendCurveEditorToolbarMenu);
+	const auto ToolbarExtender = ICurveEditorModule::FCurveEditorMenuExtender::CreateSP(EditorExtension, &FPACurveEditorExtension::ExtendCurveEditorToolbarMenu);
 	CurveEditorModule.GetAllToolBarMenuExtenders().Add(ToolbarExtender);
-	return Extender;
+	return EditorExtension;
 }
 
 TSharedRef<FExtender> FPACurveEditorExtension::ExtendCurveEditorToolbarMenu(const TSharedRef<FUICommandList> CommandList)
@@ -91,6 +92,10 @@ void FPACurveEditorExtension::CollectSelectedCurves() const
 	}
 
 	TArray<FRichCurve> Curves = GetSelectedCurves();
+	for (auto &Curve : Curves)
+	{
+		Curve.RemoveRedundantAutoTangentKeys(0.01f);
+	}
 	for (int32 i = Curves.Num() - 1; i >= 0; i--)
 	{
 		if (Curves[i].Keys.Num() < 3 || Curves[i].IsConstant())
@@ -124,43 +129,55 @@ void FPACurveEditorExtension::TestSelectedCurves() const
 		}
 	}
 
-	const float Interval = FProcAnimModule::PASettings->DefaultFrameInterval;
+	const double Interval = FProcAnimModule::PASettings->DefaultFrameInterval;
 	const UPACurveReducerDataProcessor *DataProcessor = CurveReducerNeuralNet->DataProcessorClass->GetDefaultObject<UPACurveReducerDataProcessor>();
 	int32 Correct = 0, Incorrect = 0;
-	for(FRichCurve &Curve : Curves)
+	for(const FRichCurve &Curve : Curves)
 	{
 		MatrixXf ProcessedInput = DataProcessor->PreprocessInput(Curve);
 		MatrixXf Output = CurveReducerNeuralNet->Forward(ProcessedInput);
-		TArray<float> OutputArray;
-		
-		OutputArray.Reserve(Output.cols());
-		for(int32 i = 0; i < Output.cols(); i++)
+		TArray<float> OutputArray(Output.data(), Output.size());
+
+		FString Results = "";
+		TArray<float> ResultTimes;
+		for (int32 i = 0; i < OutputArray.Num(); i++)
 		{
-			OutputArray.Add(Output(0, i));
-		}
-		const FCurveReducerCurveParams Params(Curve);
-		float t = Params.StartTime;
-		for(const float Value : OutputArray)
-		{
-			const bool bIsKey = Curve.KeyExistsAtTime(t) && t != Params.StartTime && t != Params.EndTime;
-			if(Value > 0.75f)
+			const float Value = OutputArray[i];
+			if (Value > 0.85f)
 			{
-				if(bIsKey)
+				const double Result = double(i) * Interval;
+				ResultTimes.Add(Result);
+				Results += FString::SanitizeFloat(Result) + ", ";
+			}
+		}
+		UE_LOG(LogTemp, Warning, TEXT("ResultTimes: %s"), *Results);
+
+		const float StartKeyTime = Curve.Keys[0].Time;
+		FString Actual = "";
+		for (const FRichCurveKey &Key : Curve.Keys)
+		{
+			const float RelativeKeyTime = Key.Time - StartKeyTime;
+			Actual += FString::SanitizeFloat(RelativeKeyTime) + ", ";
+			bool IsCorrect = false;
+			for (const float RT : ResultTimes)
+			{
+				if (FMath::IsNearlyEqual(RelativeKeyTime, RT, 0.01))
 				{
-					Correct++;
-				}
-				else
-				{
-					Incorrect++;
+					IsCorrect = true;
+					break;
 				}
 			}
-			else if(bIsKey)
+			if (IsCorrect)
+			{
+				Correct++;
+			}
+			else
 			{
 				Incorrect++;
 			}
-			
-			t += Interval;
 		}
+		
+		UE_LOG(LogTemp, Warning, TEXT("ActualTimes: %s"), *Actual);
 	}
 	UE_LOG(LogTemp, Warning, TEXT("Correct: %d, Incorrect: %d Ratio: %f"), Correct, Incorrect, (float)Correct / float(Correct + Incorrect));
 }

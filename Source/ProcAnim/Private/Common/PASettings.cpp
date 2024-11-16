@@ -12,7 +12,7 @@ void UPASettings::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedE
 		const FName PropertyName = PropertyChangedEvent.Property->GetFName();
 		if(PropertyName == GET_MEMBER_NAME_CHECKED(UPASettings, DefaultFPS))
 		{
-			DefaultFrameInterval = 1.f/DefaultFPS;
+			DefaultFrameInterval = 1.0/DefaultFPS;
 		}
 	}
 }
