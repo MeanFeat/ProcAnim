@@ -26,6 +26,7 @@ void FPACurveEditorExtension::BindCommands(TSharedRef<FUICommandList> CommandBin
 TSharedRef<ICurveEditorExtension> FPACurveEditorExtension::CreateCurveEditorExtension(TWeakPtr<FCurveEditor> InCurveEditor)
 {
 	TSharedRef<FPACurveEditorExtension> EditorExtension = MakeShared<FPACurveEditorExtension>(InCurveEditor);
+	WeakCurveEditor = InCurveEditor;
 	return EditorExtension;
 }
 
