@@ -13,7 +13,6 @@ class FPACurveEditorExtension : public ICurveEditorExtension, public TSharedFrom
 	
 public:
 	FPACurveEditorExtension(const TWeakPtr<FCurveEditor>& InCurveEditor)
-		: WeakCurveEditor(InCurveEditor)
 	{
 	}
 
@@ -24,15 +23,15 @@ public:
 	// ~ICurveEditorExtension
 	
 	static TSharedRef<ICurveEditorExtension> CreateCurveEditorExtension(TWeakPtr<FCurveEditor> InCurveEditor);
-	TSharedRef<FExtender> ExtendCurveEditorToolbarMenu(const TSharedRef<FUICommandList> CommandList);
+	static TSharedRef<FExtender> ExtendCurveEditorToolbarMenu(const TSharedRef<FUICommandList> CommandList);
 
 private:
-	void FillToolbarTools(FToolBarBuilder& ToolbarBuilder);
-	TSharedRef<SWidget> GetMenuContent();
-	void CollectSelectedCurves() const;
-	void TestSelectedCurves() const;
+	static void FillToolbarTools(FToolBarBuilder& ToolbarBuilder);
+	static TSharedRef<SWidget> GetMenuContent();
+	static void CollectSelectedCurves();
+	static void TestSelectedCurves();
 
-	TArray<FRichCurve> GetSelectedCurves() const;
+	static TArray<FRichCurve> GetSelectedCurves();
 
-	TWeakPtr<FCurveEditor> WeakCurveEditor;
+	static TWeakPtr<FCurveEditor> WeakCurveEditor;
 };

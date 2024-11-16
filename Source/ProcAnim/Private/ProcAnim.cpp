@@ -39,6 +39,10 @@ void FProcAnimModule::StartupModule() {
 	ICurveEditorModule& CurveEditorModule = FModuleManager::Get().LoadModuleChecked<ICurveEditorModule>("CurveEditor");
 	CurveEditorExtensionHandle = CurveEditorModule.RegisterEditorExtension(FOnCreateCurveEditorExtension::CreateStatic(&FPACurveEditorExtension::CreateCurveEditorExtension));
 
+	const auto ToolbarExtender = ICurveEditorModule::FCurveEditorMenuExtender::CreateStatic(&FPACurveEditorExtension::ExtendCurveEditorToolbarMenu);
+	auto& MenuExtenders = CurveEditorModule.GetAllToolBarMenuExtenders();
+	MenuExtenders.Add(ToolbarExtender);
+
 	// Settings
 	PASettings = GetMutableDefault<UPASettings>();
 	

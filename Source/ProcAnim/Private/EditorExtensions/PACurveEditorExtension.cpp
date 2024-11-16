@@ -13,6 +13,8 @@
 
 class UPACurveReducerDataProcessor;
 
+TWeakPtr<FCurveEditor> FPACurveEditorExtension::WeakCurveEditor = nullptr;
+
 FPACurveEditorExtension::~FPACurveEditorExtension()
 {
 }
@@ -24,9 +26,6 @@ void FPACurveEditorExtension::BindCommands(TSharedRef<FUICommandList> CommandBin
 TSharedRef<ICurveEditorExtension> FPACurveEditorExtension::CreateCurveEditorExtension(TWeakPtr<FCurveEditor> InCurveEditor)
 {
 	TSharedRef<FPACurveEditorExtension> EditorExtension = MakeShared<FPACurveEditorExtension>(InCurveEditor);
-	ICurveEditorModule& CurveEditorModule = FModuleManager::Get().LoadModuleChecked<ICurveEditorModule>("CurveEditor");
-	const auto ToolbarExtender = ICurveEditorModule::FCurveEditorMenuExtender::CreateSP(EditorExtension, &FPACurveEditorExtension::ExtendCurveEditorToolbarMenu);
-	CurveEditorModule.GetAllToolBarMenuExtenders().Add(ToolbarExtender);
 	return EditorExtension;
 }
 
@@ -36,8 +35,7 @@ TSharedRef<FExtender> FPACurveEditorExtension::ExtendCurveEditorToolbarMenu(cons
 	Extender->AddToolBarExtension("Filters",
 	EExtensionHook::After,
 	CommandList,
-	FToolBarExtensionDelegate::CreateSP(this, &FPACurveEditorExtension::FillToolbarTools));
-
+	FToolBarExtensionDelegate::CreateStatic(&FPACurveEditorExtension::FillToolbarTools));
 	return Extender;
 }
 
@@ -47,7 +45,7 @@ void FPACurveEditorExtension::FillToolbarTools(FToolBarBuilder& ToolbarBuilder)
 	ToolbarBuilder.AddSeparator();
 	ToolbarBuilder.AddComboButton(
 		FUIAction(),
-		FOnGetContent::CreateSP(this, &FPACurveEditorExtension::GetMenuContent),
+		FOnGetContent::CreateStatic(&FPACurveEditorExtension::GetMenuContent),
 		TAttribute<FText>(),
 		LOCTEXT("ProcAnimSequencerToolsTooltip", "Open Proc Anim Sequencer Tools Menu"),
 		FSlateIcon("ProcAnimEditorStyle", "ProcAnimEditor.ToolbarMenu.Small", "ProcAnimEditor.ToolbarMenu.Small")
@@ -64,7 +62,7 @@ TSharedRef<SWidget> FPACurveEditorExtension::GetMenuContent()
 		LOCTEXT("CollectSelectedTooltip", "Collect Selected Curves"),
 		FSlateIcon(),
 		FUIAction(
-			FExecuteAction::CreateSP(this, &FPACurveEditorExtension::CollectSelectedCurves),
+			FExecuteAction::CreateStatic(&FPACurveEditorExtension::CollectSelectedCurves),
 			FCanExecuteAction::CreateStatic( [](){ return true; } )
 		)
 	);
@@ -74,7 +72,7 @@ TSharedRef<SWidget> FPACurveEditorExtension::GetMenuContent()
 		LOCTEXT("TestSelectedTooltip", "Test Selected Curves"),
 		FSlateIcon(),
 		FUIAction(
-			FExecuteAction::CreateSP(this, &FPACurveEditorExtension::TestSelectedCurves),
+			FExecuteAction::CreateStatic(&FPACurveEditorExtension::TestSelectedCurves),
 			FCanExecuteAction::CreateStatic( [](){ return true; } )
 		)
 	);
@@ -82,7 +80,7 @@ TSharedRef<SWidget> FPACurveEditorExtension::GetMenuContent()
 	return MenuBuilder.MakeWidget();
 }
 
-void FPACurveEditorExtension::CollectSelectedCurves() const
+void FPACurveEditorExtension::CollectSelectedCurves()
 {
 	const TSharedPtr<FCurveEditor> CurveEditor = WeakCurveEditor.Pin();
 	UPACurveCollector* CurveCollection = FProcAnimModule::PASettings->PACurveCollector.LoadSynchronous();
@@ -111,7 +109,7 @@ void FPACurveEditorExtension::CollectSelectedCurves() const
 	}
 }
 
-void FPACurveEditorExtension::TestSelectedCurves() const
+void FPACurveEditorExtension::TestSelectedCurves()
 {
 	const TSharedPtr<FCurveEditor> CurveEditor = WeakCurveEditor.Pin();
 	const UMLNeuralNet* CurveReducerNeuralNet = FProcAnimModule::PASettings->PACurveReducerNeuralNet.LoadSynchronous();
@@ -193,7 +191,7 @@ void FPACurveEditorExtension::TestSelectedCurves() const
 	UE_LOG(LogTemp, Warning, TEXT("Correct: %d, Incorrect: %d Ratio: %f"), Correct, Incorrect, (float)Correct / float(Correct + Incorrect));
 }
 
-TArray<FRichCurve> FPACurveEditorExtension::GetSelectedCurves() const
+TArray<FRichCurve> FPACurveEditorExtension::GetSelectedCurves()
 {
 	TArray<FRichCurve> Curves;
 	const TSharedPtr<FCurveEditor> CurveEditor = WeakCurveEditor.Pin();
