@@ -18,7 +18,7 @@ void UPACurveReducerTrainingSpecialOp::Operation() const
 		return;
 	}
 	TrainingData->ResetData();
-	if(const UPACurveReducerDataProcessor* CurveReducer = NeuralNet->DataProcessorClass->GetDefaultObject<UPACurveReducerDataProcessor>())
+	if(const UPACurveReducerDataProcessor* CurveReducer = Cast<UPACurveReducerDataProcessor>(NeuralNet->DataProcessor))
 	{
 		const TArray<FRichCurve> Curves = CurveCollector->Curves;
 		

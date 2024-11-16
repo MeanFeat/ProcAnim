@@ -48,9 +48,20 @@ public:
 
 	virtual FRichCurve PostProcessOutput(const MatrixXf &OutputData) const override;
 
-	static MatrixXf CalculateLabels(const FRichCurve& InputCurve);
+	MatrixXf CalculateLabels(const FRichCurve& InputCurve) const;
 
+	void ConvertKeyToData(const FRichCurveKey &Key, VectorXf &OutData) const;
+
+	void ConvertDataToKey(const VectorXf &Data, FRichCurveKey &OutKey) const;
+	
 	// uneven numbers only; center index is removed
-	int32 WindowSize = 7;
+	UPROPERTY(EditAnywhere)
+	int32 WindowSize = 9;
+	
+	UPROPERTY(EditAnywhere)
+	float TangentCompression = 0.025f;
+    
+	static int32 OutputSize;
+
 	
 };

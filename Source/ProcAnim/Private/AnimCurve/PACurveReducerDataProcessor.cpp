@@ -4,6 +4,8 @@
 #include "PASettings.h"
 #include "ProcAnim.h"
 
+int32 UPACurveReducerDataProcessor::OutputSize = 5;
+
 MatrixXf UPACurveReducerDataProcessor::PreprocessInput(const FRichCurve& InputCurve) const
 {
 	const FCurveReducerCurveParams CurveParams(InputCurve);
@@ -59,21 +61,45 @@ MatrixXf UPACurveReducerDataProcessor::PreprocessInput(const FRichCurve& InputCu
 	return Result;
 }
 
-MatrixXf UPACurveReducerDataProcessor::CalculateLabels(const FRichCurve& InputCurve)
+MatrixXf UPACurveReducerDataProcessor::CalculateLabels(const FRichCurve& InputCurve) const
 {
 	const FCurveReducerCurveParams CurveParams(InputCurve);
 	const double Interval = FProcAnimModule::PASettings->DefaultFrameInterval;
 	
 	const int32 SampleCount = ((CurveParams.EndTime - CurveParams.StartTime) / Interval) + 1;
-	MatrixXf Result = MatrixXf::Zero(1, SampleCount);
-
-	for (const auto Key : InputCurve.Keys)
+	MatrixXf Result = MatrixXf::Ones(OutputSize, SampleCount) * -1.f;
+	
+	for (const FRichCurveKey Key : InputCurve.Keys)
 	{
 		const float Time = Key.Time;
 		const int32 Index = FMath::RoundToInt32((Time - CurveParams.StartTime) / Interval);
-		Result(Index) = 1.f;
+		VectorXf OutData(OutputSize);
+		ConvertKeyToData(Key, OutData);
+		Result.col(Index) = OutData;
 	}
 	return Result;
+}
+
+void UPACurveReducerDataProcessor::ConvertKeyToData(const FRichCurveKey& Key, VectorXf& OutData) const
+{
+	int i = 0;
+	OutData(i++) = 1.f;
+	const float CompressedArriveTangent = Key.ArriveTangent * TangentCompression;
+	OutData(i++) = CompressedArriveTangent;
+	OutData(i++) = Key.ArriveTangentWeight;
+	const float CompressedLeaveTangent = Key.LeaveTangent * TangentCompression;
+	OutData(i++) = CompressedLeaveTangent;
+	OutData(i++) = Key.LeaveTangentWeight;
+}
+
+void UPACurveReducerDataProcessor::ConvertDataToKey(const VectorXf& Data, FRichCurveKey& OutKey) const
+{
+	OutKey.InterpMode = RCIM_Cubic;
+	int i = 1;
+	OutKey.ArriveTangent = Data(i++) / TangentCompression;
+	OutKey.ArriveTangentWeight = Data(i++);
+	OutKey.LeaveTangent = Data(i++) / TangentCompression;
+	OutKey.LeaveTangentWeight = Data(i++);
 }
 
 void UPACurveReducerDataProcessor::PreProcessTrainingData(const TArray<FRichCurve>& InputCurves, MatrixXf& OutData, MatrixXf& OutLabels) const
