@@ -5,6 +5,8 @@
 #include "ProcAnim.h"
 #include "Common/MLESLibrary.h"
 
+#define LOCTEXT_NAMESPACE "UPACurveReducerDataProcessor"
+
 int32 UPACurveReducerDataProcessor::OutputSize = 5;
 
 MatrixXf UPACurveReducerDataProcessor::PreprocessInput(const FRichCurve& InputCurve) const
@@ -16,7 +18,7 @@ MatrixXf UPACurveReducerDataProcessor::PreprocessInput(const FRichCurve& InputCu
 	const float WingLength = Interval * float(LeadSampleIndex);
 
 	const int32 SampleCount = ((CurveParams.EndTime - CurveParams.StartTime) / Interval) + 1;
-	const int32 SampleSize = ((WindowSize - 1) * 4) - 1;
+	const int32 SampleSize = ((WindowSize - 1) * 5);
 	MatrixXf Result(SampleSize, SampleCount);
 	TArray<float> EvalWindow;
 	for(int32 c = 0; c < SampleCount; c++)
@@ -52,19 +54,27 @@ MatrixXf UPACurveReducerDataProcessor::PreprocessInput(const FRichCurve& InputCu
 			Normals.Add(Normal);
 			SquaredNormals.Add(Normal * Normal);
         }
-		
+
+		TArray<float> Deltas;
 		TArray<float> Tangents;
-		for(int32 i = 1; i < EvalWindow.Num(); i++)
+		for(int32 i = 0; i < EvalWindow.Num(); i++)
 		{
-			const float Delta = EvalWindow[i] - EvalWindow[i - 1];
-			const float Tangent = (Delta / Interval) * TangentCompression;
-			Tangents.Add(Tangent);
+			float Delta = i > 0	 ? EvalWindow[i] - EvalWindow[i - 1] : 0.f;
+			Delta += i < EvalWindow.Num() - 1 ? EvalWindow[i + 1] - EvalWindow[i] : 0.f;
+			if (i > 0 && i < EvalWindow.Num() - 1)
+            {
+                Delta /= 2.f;
+            }
+			Deltas.Add(Delta);
+			Tangents.Add(FMath::Tan(Delta));
 		}
 		
 		TArray<float> FinalData = EvalWindow;
+		FinalData.Append(Deltas);
 		FinalData.Append(Normals);
 		FinalData.Append(Tangents);
 		FinalData.Append(SquaredNormals);
+		
 		check(FinalData.Num() == SampleSize)
 		Result.col(c) = Map<VectorXf>(FinalData.GetData(), SampleSize);
 	}
@@ -116,6 +126,8 @@ void UPACurveReducerDataProcessor::PreProcessTrainingData(const TArray<FRichCurv
 {
 	OutData = MatrixXf();
 	OutLabels = MatrixXf();
+	FScopedSlowTask SlowTask(InputCurves.Num(), LOCTEXT("Generating Training Data", "Generating Training Data"));
+	SlowTask.MakeDialog();
 	for(const FRichCurve &Curve : InputCurves)
 	{
 		MatrixXf Data = PreprocessInput(Curve);
@@ -132,6 +144,7 @@ void UPACurveReducerDataProcessor::PreProcessTrainingData(const TArray<FRichCurv
 		MatrixXf ResultLabels = MatrixXf(Labels.rows(), ColCount);
 		ResultLabels << OutLabels, Labels;
 		OutLabels = ResultLabels;
+		SlowTask.EnterProgressFrame(1);
 	}
 }
 
@@ -139,3 +152,5 @@ FRichCurve UPACurveReducerDataProcessor::PostProcessOutput(const MatrixXf& Outpu
 {
 	return FRichCurve();
 }
+
+#undef LOCTEXT_NAMESPACE
