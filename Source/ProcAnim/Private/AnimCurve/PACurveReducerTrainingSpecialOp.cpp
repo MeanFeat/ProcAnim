@@ -65,11 +65,13 @@ void UPACurveReducerTrainingSpecialOp::Operation() const
 			if (TestData)
 			{
 				TestData->AppendData(Data, Labels);
+				TestData->Modify();
 			}
 		}
 		else
 		{
 			TrainingData->AppendData(Data, Labels);
+			TrainingData->Modify();
 		}
 	}
 }
