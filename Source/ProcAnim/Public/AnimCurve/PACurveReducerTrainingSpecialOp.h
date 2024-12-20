@@ -29,4 +29,7 @@ public:
 
 	UPROPERTY(EditAnywhere)
 	bool AddToTestData = false;
+
+	UPROPERTY(EditAnywhere)
+	bool bGenerateCurves = false;
 };

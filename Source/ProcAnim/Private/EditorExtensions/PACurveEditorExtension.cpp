@@ -134,6 +134,10 @@ void FPACurveEditorExtension::TestSelectedCurves()
 	int32 Correct = 0, Incorrect = 0;
 	for(const FRichCurve &Curve : Curves)
 	{
+		if (Curve.IsConstant())
+		{
+			continue;
+		}
 		MatrixXf ProcessedInput = DataProcessor->PreprocessInput(Curve);
 		MatrixXf Output = CurveReducerNeuralNet->Forward(ProcessedInput);
 
@@ -143,13 +147,13 @@ void FPACurveEditorExtension::TestSelectedCurves()
 		for (int32 i = 0; i < Output.cols(); i++)
 		{
 			const float Value = Output(0, i);
-			if (Value > 0.85f)
+			if (Value > 0.95f)
 			{
-				FRichCurveKey Key;
+				/*FRichCurveKey Key;
 				const float StartTime = + Curve.Keys[0].Time;
-				DataProcessor->ConvertDataToKey(Output.col(i), Key);
+				DataProcessor->ConvertDataToKey(Output.col(i), Key);*/
 				const double ResultTime = (double(i) * Interval);
-				UE_LOG(LogTemp, Warning, TEXT("Neural Arrive Tangent: %f, Arrive Tangent Weight: %f, Leave Tangent: %f, Leave Tangent Weight: %f"), Key.ArriveTangent, Key.ArriveTangentWeight, Key.LeaveTangent, Key.LeaveTangentWeight);
+				/*UE_LOG(LogTemp, Warning, TEXT("Neural Arrive Tangent: %f, Arrive Tangent Weight: %f, Leave Tangent: %f, Leave Tangent Weight: %f"), Key.ArriveTangent, Key.ArriveTangentWeight, Key.LeaveTangent, Key.LeaveTangentWeight);
 				if (const FRichCurveKey* ActualKey = CopyOfKeys.FindByPredicate([ResultTime, StartTime](const FRichCurveKey &K) { return FMath::IsNearlyEqual(K.Time, ResultTime + StartTime, 0.01); }))
 				{
 					UE_LOG(LogTemp, Warning, TEXT("Actual Arrive Tangent: %f, Arrive Tangent Weight: %f, Leave Tangent: %f, Leave Tangent Weight: %f"), ActualKey->ArriveTangent, ActualKey->ArriveTangentWeight, ActualKey->LeaveTangent, ActualKey->LeaveTangentWeight);
@@ -157,19 +161,17 @@ void FPACurveEditorExtension::TestSelectedCurves()
 				else
 				{
 					UE_LOG(LogTemp, Warning, TEXT("Actual Key not found for time: %f"), ResultTime);
-				}
+				}*/
 				ResultTimes.Add(ResultTime);
 				Results += FString::SanitizeFloat(ResultTime) + ", ";
 			}
 		}
 		UE_LOG(LogTemp, Log, TEXT("Value: \n%s"), *FMLESLibrary::EigenMatrixToString(Output));
-		UE_LOG(LogTemp, Warning, TEXT("ResultTimes: %s"), *Results);
-
-
+		//UE_LOG(LogTemp, Warning, TEXT("ResultTimes: %s"), *Results);
 
 		const float StartKeyTime = Curve.Keys[0].Time;
 		FString Actual = "";
-		for (const FRichCurveKey &Key : Curve.Keys)
+		/*for (const FRichCurveKey &Key : Curve.Keys)
 		{
 			const float RelativeKeyTime = Key.Time - StartKeyTime;
 			Actual += FString::SanitizeFloat(RelativeKeyTime) + ", ";
@@ -190,9 +192,26 @@ void FPACurveEditorExtension::TestSelectedCurves()
 			{
 				Incorrect++;
 			}
+		}*/
+
+		for (const float &Result : ResultTimes)
+		{
+			const float KeyTime = Result + StartKeyTime;
+			if (KeyTime == 0.f)
+			{
+				continue;
+			}
+			if (Curve.KeyExistsAtTime(KeyTime))
+            {
+                Correct++;
+            }
+            else
+            {
+                Incorrect++;
+            }
 		}
 		
-		UE_LOG(LogTemp, Warning, TEXT("ActualTimes: %s"), *Actual);
+		//UE_LOG(LogTemp, Warning, TEXT("ActualTimes: %s"), *Actual);
 	}
 	UE_LOG(LogTemp, Warning, TEXT("Correct: %d, Incorrect: %d Ratio: %f"), Correct, Incorrect, (float)Correct / float(Correct + Incorrect));
 }

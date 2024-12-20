@@ -7,7 +7,7 @@
 
 #define LOCTEXT_NAMESPACE "UPACurveReducerDataProcessor"
 
-int32 UPACurveReducerDataProcessor::OutputSize = 5;
+int32 UPACurveReducerDataProcessor::OutputSize = 1;
 
 MatrixXf UPACurveReducerDataProcessor::PreprocessInput(const FRichCurve& InputCurve) const
 {
@@ -18,7 +18,7 @@ MatrixXf UPACurveReducerDataProcessor::PreprocessInput(const FRichCurve& InputCu
 	const float WingLength = Interval * float(LeadSampleIndex);
 
 	const int32 SampleCount = ((CurveParams.EndTime - CurveParams.StartTime) / Interval) + 1;
-	const int32 SampleSize = ((WindowSize - 1) * 5);
+	const int32 SampleSize = ((WindowSize - 1) * 3);
 	MatrixXf Result(SampleSize, SampleCount);
 	TArray<float> EvalWindow;
 	for(int32 c = 0; c < SampleCount; c++)
@@ -52,11 +52,10 @@ MatrixXf UPACurveReducerDataProcessor::PreprocessInput(const FRichCurve& InputCu
             Value = (Value - LeadValue);
 			const float Normal = Value / MaxAbsValue;
 			Normals.Add(Normal);
-			SquaredNormals.Add(Normal * Normal);
+			SquaredNormals.Add((Normal * Normal * 2.f) - 1.f);
         }
 
 		TArray<float> Deltas;
-		TArray<float> Tangents;
 		for(int32 i = 0; i < EvalWindow.Num(); i++)
 		{
 			float Delta = i > 0	 ? EvalWindow[i] - EvalWindow[i - 1] : 0.f;
@@ -66,13 +65,10 @@ MatrixXf UPACurveReducerDataProcessor::PreprocessInput(const FRichCurve& InputCu
                 Delta /= 2.f;
             }
 			Deltas.Add(Delta);
-			Tangents.Add(FMath::Tan(Delta));
 		}
 		
-		TArray<float> FinalData = EvalWindow;
-		FinalData.Append(Deltas);
+		TArray<float> FinalData = Deltas;
 		FinalData.Append(Normals);
-		FinalData.Append(Tangents);
 		FinalData.Append(SquaredNormals);
 		
 		check(FinalData.Num() == SampleSize)
@@ -88,7 +84,7 @@ MatrixXf UPACurveReducerDataProcessor::CalculateLabels(const FRichCurve& InputCu
 	
 	const int32 SampleCount = ((CurveParams.EndTime - CurveParams.StartTime) / Interval) + 1;
 	MatrixXf Result = MatrixXf::Zero(OutputSize, SampleCount);
-	Result.row(0) = VectorXf::Ones(SampleCount) * -1.f;
+	//Result.row(0) = VectorXf::Ones(SampleCount) * -1.f;
 	for (const FRichCurveKey Key : InputCurve.Keys)
 	{
 		const float Time = Key.Time;
@@ -104,22 +100,22 @@ void UPACurveReducerDataProcessor::ConvertKeyToData(const FRichCurveKey& Key, Ve
 {
 	int i = 0;
 	OutData(i++) = 1.f;
-	const float CompressedArriveTangent = Key.ArriveTangent * TangentCompression;
+	/*const float CompressedArriveTangent = Key.ArriveTangent * TangentCompression;
 	OutData(i++) = CompressedArriveTangent;
 	OutData(i++) = Key.ArriveTangentWeight;
 	const float CompressedLeaveTangent = Key.LeaveTangent * TangentCompression;
 	OutData(i++) = CompressedLeaveTangent;
-	OutData(i++) = Key.LeaveTangentWeight;
+	OutData(i++) = Key.LeaveTangentWeight;*/
 }
 
 void UPACurveReducerDataProcessor::ConvertDataToKey(const VectorXf& Data, FRichCurveKey& OutKey) const
 {
 	OutKey.InterpMode = RCIM_Cubic;
 	int i = 1;
-	OutKey.ArriveTangent = Data(i++) / TangentCompression;
-	OutKey.ArriveTangentWeight = Data(i++);
-	OutKey.LeaveTangent = Data(i++) / TangentCompression;
-	OutKey.LeaveTangentWeight = Data(i++);
+	OutKey.ArriveTangent = 0.f;// Data(i++) / TangentCompression;
+	OutKey.ArriveTangentWeight = 0.f;// Data(i++);
+	OutKey.LeaveTangent =0.f;// Data(i++) / TangentCompression;
+	OutKey.LeaveTangentWeight =0.f;// Data(i++);
 }
 
 void UPACurveReducerDataProcessor::PreProcessTrainingData(const TArray<FRichCurve>& InputCurves, MatrixXf& OutData, MatrixXf& OutLabels) const
