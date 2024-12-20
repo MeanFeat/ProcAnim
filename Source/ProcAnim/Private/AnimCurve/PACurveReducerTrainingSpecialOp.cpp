@@ -34,10 +34,6 @@ void UPACurveReducerTrainingSpecialOp::Operation() const
     }
 	if(const UPACurveReducerDataProcessor* CurveReducer = Cast<UPACurveReducerDataProcessor>(NeuralNet->DataProcessor))
 	{
-		
-#if 0
-		TArray<FRichCurve> Curves = CurveCollector->Curves;
-#else
 		TArray<FRichCurve> Curves;
 		if (bGenerateCurves)
 		{
