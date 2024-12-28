@@ -114,8 +114,11 @@ void FPACurveEditorExtension::CollectSelectedCurves()
 void FPACurveEditorExtension::TestSelectedCurves()
 {
 	const TSharedPtr<FCurveEditor> CurveEditor = WeakCurveEditor.Pin();
-	const UMLNeuralNet* CurveReducerNeuralNet = FProcAnimModule::PASettings->PACurveReducerNeuralNet.LoadSynchronous();
-	if (!CurveEditor.IsValid() || !CurveReducerNeuralNet || !CurveReducerNeuralNet->DataProcessor || !CurveReducerNeuralNet->GetNet())
+	const UMLNeuralNet* KeyDetector = FProcAnimModule::PASettings->KeyDetectionNeuralNet.LoadSynchronous();
+	const UMLNeuralNet* TangentApprox = FProcAnimModule::PASettings->TangentApproximationNeuralNet.LoadSynchronous();
+	if (!CurveEditor.IsValid()
+		|| !KeyDetector || !KeyDetector->DataProcessor || !KeyDetector->GetNet()
+		|| !TangentApprox || !TangentApprox->DataProcessor || !TangentApprox->GetNet())
 	{
 		return;
 	}
@@ -130,7 +133,8 @@ void FPACurveEditorExtension::TestSelectedCurves()
 	}
 
 	const double Interval = FProcAnimModule::PASettings->DefaultFrameInterval;
-	const UPACurveReducerDataProcessor *DataProcessor = Cast<UPACurveReducerDataProcessor>(CurveReducerNeuralNet->DataProcessor);
+	const UPACurveReducerDataProcessor *DataProcessor = Cast<UPACurveReducerDataProcessor>(KeyDetector->DataProcessor);
+	const UPATangentApproximationProcessor *TangentDataProcessor = Cast<UPATangentApproximationProcessor>(TangentApprox->DataProcessor);
 	int32 Correct = 0, Incorrect = 0;
 	for(const FRichCurve &Curve : Curves)
 	{
@@ -139,7 +143,7 @@ void FPACurveEditorExtension::TestSelectedCurves()
 			continue;
 		}
 		MatrixXf ProcessedInput = DataProcessor->PreprocessInput(Curve);
-		MatrixXf Output = CurveReducerNeuralNet->Forward(ProcessedInput);
+		MatrixXf Output = KeyDetector->Forward(ProcessedInput);
 
 		auto CopyOfKeys = Curve.GetCopyOfKeys();
 		FString Results = "";
@@ -149,11 +153,12 @@ void FPACurveEditorExtension::TestSelectedCurves()
 			const float Value = Output(0, i);
 			if (Value > 0.95f)
 			{
-				/*FRichCurveKey Key;
+				FRichCurveKey Key;
 				const float StartTime = + Curve.Keys[0].Time;
-				DataProcessor->ConvertDataToKey(Output.col(i), Key);*/
+				const MatrixXf TangentOutput = TangentApprox->Forward(ProcessedInput.col(i));
+				TangentDataProcessor->ConvertDataToKey(TangentOutput, Key);
 				const double ResultTime = (double(i) * Interval);
-				/*UE_LOG(LogTemp, Warning, TEXT("Neural Arrive Tangent: %f, Arrive Tangent Weight: %f, Leave Tangent: %f, Leave Tangent Weight: %f"), Key.ArriveTangent, Key.ArriveTangentWeight, Key.LeaveTangent, Key.LeaveTangentWeight);
+				UE_LOG(LogTemp, Warning, TEXT("Neural Arrive Tangent: %f, Arrive Tangent Weight: %f, Leave Tangent: %f, Leave Tangent Weight: %f"), Key.ArriveTangent, Key.ArriveTangentWeight, Key.LeaveTangent, Key.LeaveTangentWeight);
 				if (const FRichCurveKey* ActualKey = CopyOfKeys.FindByPredicate([ResultTime, StartTime](const FRichCurveKey &K) { return FMath::IsNearlyEqual(K.Time, ResultTime + StartTime, 0.01); }))
 				{
 					UE_LOG(LogTemp, Warning, TEXT("Actual Arrive Tangent: %f, Arrive Tangent Weight: %f, Leave Tangent: %f, Leave Tangent Weight: %f"), ActualKey->ArriveTangent, ActualKey->ArriveTangentWeight, ActualKey->LeaveTangent, ActualKey->LeaveTangentWeight);
@@ -161,7 +166,7 @@ void FPACurveEditorExtension::TestSelectedCurves()
 				else
 				{
 					UE_LOG(LogTemp, Warning, TEXT("Actual Key not found for time: %f"), ResultTime);
-				}*/
+				}
 				ResultTimes.Add(ResultTime);
 				Results += FString::SanitizeFloat(ResultTime) + ", ";
 			}

@@ -46,9 +46,9 @@ void UPACurveReducerTrainingSpecialOp::Operation() const
 				float Value = 0.0f;
 				for(int32 j = 0; j < NumKeys; j++)
 				{
-					CrazyLongCurve.AddKey(Time, Value);
+					const FKeyHandle KeyHandle = CrazyLongCurve.AddKey(Time, Value);
 					Value += FMath::RandRange(-20.0f, 20.0f);
-					FRichCurveKey &Key = CrazyLongCurve.GetKey(CrazyLongCurve.FindKey(Time));
+					FRichCurveKey &Key = CrazyLongCurve.GetKey(KeyHandle);
 					Key.InterpMode = ERichCurveInterpMode::RCIM_Cubic;
 					Key.TangentMode = ERichCurveTangentMode::RCTM_Auto;
 					Key.ArriveTangent = FMath::RandRange(-180.0f, 180.0f);

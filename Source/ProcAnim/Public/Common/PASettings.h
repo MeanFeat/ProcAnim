@@ -20,7 +20,10 @@ public:
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 
 	UPROPERTY(EditAnywhere, Config, Category = "Curve Reducer")
-	TSoftObjectPtr<UMLNeuralNet> PACurveReducerNeuralNet = nullptr;
+	TSoftObjectPtr<UMLNeuralNet> KeyDetectionNeuralNet = nullptr;
+	
+	UPROPERTY(EditAnywhere, Config, Category = "Curve Reducer")
+	TSoftObjectPtr<UMLNeuralNet> TangentApproximationNeuralNet = nullptr;
 
 	UPROPERTY(EditAnywhere, Config, Category = "Curve Reducer|Collector")
 	TSoftObjectPtr<UPACurveCollector> PACurveCollector = nullptr;

@@ -3,7 +3,6 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "PACurveCollector.h"
 #include "NeuralNet/MLNNTrainintProfileSpecialOperation.h"
 #include "PACurveReducerTrainingSpecialOp.generated.h"
 
